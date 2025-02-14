@@ -22,8 +22,7 @@ const TypingExam = () => {
         //     <Typing.Backspace count={5} />
         //     {/* backspace는 아래에 선언해야하는 특징 */}
         // </Typing>
-
-        <Typing onFinishedTyping={() => console.log("Typing completed")}>
+        <Typing onFinishedTyping={() => console.log("Typing completed")} >
             <h1>Typing With CallBack</h1>
         </Typing>
     );

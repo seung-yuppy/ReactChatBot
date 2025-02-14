@@ -3,7 +3,7 @@
 // npm i
 // npm i --save react-typing-animation
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css"
 import Typing from "react-typing-animation";  // React Typing Animation 라이브러리 --> 타이핑 효과를 쉽게 구현할 수 있도록 제공되는 라이브러리
 
@@ -37,9 +37,58 @@ const App = () => {
   };
 
   // AI 타이핑이 종료되었을 때 이 메서드를 실행
-  const handleEndTyping = () => {
+  const handleEndTyping = (id) => {
+    // state를 활용하여 상태 업데이트를 진행
+    // 메세지 관리 
+    // id값을 기준으로 (id를 파라미터로 받아와)
+    // --> message의 상태를 업데이트
+    // --> 상태 업데이트에는 다음의 코드를 추가 
+    // msg: 받아온 메세지에 대해 구분할 때 map함수를 이용해서 msg라는 단위로 나눔
+    // msg.id === id ? {...msg, isTyping: false} : msg
+    setMessages((prevMessagges) =>
+      prevMessagges.map((msg) => (
+        msg.id === id ? { ...msg, isTyping: false } : { ...msg }
+      ))
+    );
 
+    // currentTypingId값을 초기화
+    setCurrentTypingId(null);
+
+    // alert(id);
   };
+
+  // useEffect는 랜더링 후에 부작용을 확인하기 위해 쓰는 훅 --> 랜더링 후 side effect를 실행하는 훅
+  // side effect : 랜더링 후 비동기로 처리할 부수적인 효과들 --> React식 콜백모음(모든 작업이 끝난 후 실행할 수 있는 콜백모음집)
+  // 화면에 랜더링해줄거 다 해주고 실질적인 데이터는 비동기로 처리
+  // 화면에 부를거 다 부르고 처리해야할거 같으면 추가해주면 됨
+  // 필요한 이유 : 순차적 실행이 필요할 때 
+  //                --> currentTypingId가 null일수도 있다
+  //                --> 조건을 만족하는 메세지를 찾아서 다시 타이핑하도록 코드를 작성
+  // 여기서는 이벤트 조정을 위해 사용했지만 useEffect는 실행순서 때문에 데이터 로딩이 안될 경우 
+  useEffect(() => {
+    // ai가 입력하는 것처럼 이벤트 만들거임
+    // ai가 입력하는 이벤트는 모든 창에 적용인가?
+    // --> user가 입력한 내용은 바로 렌더링하고 ai가 입력한 내용만 텍스트 효과를 부여
+
+    // ai가 어떻게 입력했느냐 아니냐를 구분할까?
+    if (currentTypingId === null) { // 현재 타이핑 중인 메세지가 있느냐 없는가를 확인
+      // 어쨌든 user는 채팅을 입력할 것임
+      // 입력한 채팅은 화면에 랜더링 되어야함
+      // user와 ai의 채팅내용이 각자 따로따로 한번씩 불러와지는가? 
+      // 같이 랜더링되기 때문에 
+      // 우선 user / ai의 채팅 내용을 구분하고자 처리
+
+      // 우선 user의 내용을 처리
+      // messages 배열(상태)에는 입력한 내용들이 들어가 있을 것
+      //  --> 단순히 방금 입력한 내용만 있는 것이 아니라 이전에 입력했던 내용들도 보관하고 있음
+      const aiTypingMessage = messages.find((msg) => !msg.isUser && msg.isTyping);  // ai 메세지를 먼저 messages 배열에서 찾는다
+      if (aiTypingMessage) {
+        setCurrentTypingId(aiTypingMessage.id); // ai 메세지를 찾으면 현재타이핑하고 있는 id의 값을 ai 메세지의 id로 넣어준다
+      };
+    };
+    // console.log("test");
+  }, [messages, currentTypingId]);  // 종속성 배열 선언 ==> 중복 실행 방지
+
 
   return (
     <>
@@ -59,19 +108,26 @@ const App = () => {
   );
 };
 
+/* 타이핑 애니메이션의 적용은 AI에만 적용되야함 --> 구분을 하는 가장 편한 방법 : 데이터 비교 */
+// 랜더링을 처리하는 컴포넌트 
 const MessageList = ({ onShowMessages, onEndTyping, currentTypingId }) => {
   return (
     <>
       <div className="messages-list">
-        {onShowMessages && onShowMessages.map((onShowMessage, index) => (
-          <div key={index} className={onShowMessage.isUser ? "user-message" : "ai-message"}>
-            <Typing speed={100} onFinishedTyping={() => onEndTyping()}>
-              <p>
-                <b>{onShowMessage.isUser ? "User" : "AI"}</b>: {onShowMessage.text}
-              </p>
-            </Typing>
-          </div>
-        ))}
+        {onShowMessages && onShowMessages.map((message, index) =>
+          message.isTyping && message.id === currentTypingId ?
+            (
+              <Typing key={`typing-${message.id || index}`} speed={110} onFinishedTyping={() => onEndTyping(message.id)}>
+                <div className={message.isUser ? "user-message" : "ai-message"}>
+                  {message.text}
+                </div>
+              </Typing>
+            ) : (
+              <div key={`message-${message.id || index}`} className={message.isUser ? "user-message" : "ai-message"}>
+                {message.text}
+              </div>
+            )
+        )}
       </div>
     </>
   );
@@ -86,7 +142,7 @@ const MessageForm = ({ onSendMessage }) => {
     e.preventDefault();
     onSendMessage(message);
     setMessage("");
-  }
+  };
 
   return (
     <>
